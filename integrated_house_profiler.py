@@ -1,7 +1,15 @@
 # integrated_house_profiler.py
-# Combines parameter selection with AI-generated ideal house profiles
+# Updated to use parameters from parameter_workshop_fixed.py
 
 import streamlit as st
+
+# MUST BE FIRST STREAMLIT COMMAND
+st.set_page_config(
+    page_title="AI House Profile Generator",
+    page_icon="🏡",
+    layout="wide"
+)
+
 import pandas as pd
 import json
 import requests
@@ -10,64 +18,18 @@ from typing import Dict, List
 from datetime import datetime
 from dotenv import load_dotenv
 
+# Import the parameter structure from parameter definitions (no Streamlit)
+from parameter_definitions import PARAMETERS, parameter_selection_quiz, recommend_parameters, DEFAULT_PARAMETER_VALUES
+
 # Load environment variables
 load_dotenv()
 
 # Groq API configuration
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama3-70b-8192"  # Best model for detailed analysis
-
-# Comprehensive parameter structure
-PARAMETERS = {
-    "💰 Budget & Value": {
-        "max_price": {"name": "Maximum Price", "type": "number", "unit": "$"},
-        "min_price": {"name": "Minimum Price", "type": "number", "unit": "$"},
-        "price_per_sqft": {"name": "Target $/sqft", "type": "number", "unit": "$/sqft"},
-        "property_taxes": {"name": "Max Property Tax", "type": "number", "unit": "$/year"},
-        "hoa_acceptable": {"name": "HOA Acceptable", "type": "boolean", "unit": ""},
-    },
-    "🏠 Size & Layout": {
-        "min_sqft": {"name": "Minimum Square Feet", "type": "number", "unit": "sqft"},
-        "max_sqft": {"name": "Maximum Square Feet", "type": "number", "unit": "sqft"},
-        "bedrooms": {"name": "Number of Bedrooms", "type": "number", "unit": ""},
-        "bathrooms": {"name": "Number of Bathrooms", "type": "number", "unit": ""},
-        "stories": {"name": "Number of Stories", "type": "choice", "options": ["Single", "Two", "Three+", "Any"]},
-        "open_floor_plan": {"name": "Open Floor Plan", "type": "boolean", "unit": ""},
-        "home_office": {"name": "Dedicated Office", "type": "boolean", "unit": ""},
-        "master_main_floor": {"name": "Master on Main", "type": "boolean", "unit": ""},
-        "finished_basement": {"name": "Finished Basement", "type": "boolean", "unit": ""},
-    },
-    "📍 Location": {
-        "neighborhoods": {"name": "Preferred Areas", "type": "multiselect", 
-                         "options": ["Plymouth", "Minnetonka", "Eden Prairie", "Woodbury", "Maple Grove", 
-                                   "Edina", "Wayzata", "Bloomington", "Burnsville", "Apple Valley"]},
-        "max_commute": {"name": "Max Commute Time", "type": "number", "unit": "minutes"},
-        "school_rating": {"name": "Min School Rating", "type": "number", "unit": "/10"},
-        "walkability": {"name": "Walkability Important", "type": "boolean", "unit": ""},
-        "quiet_street": {"name": "Quiet Street", "type": "boolean", "unit": ""},
-    },
-    "🏡 Property Features": {
-        "lot_size": {"name": "Minimum Lot Size", "type": "number", "unit": "sqft"},
-        "garage_spaces": {"name": "Garage Spaces", "type": "number", "unit": "cars"},
-        "year_built_min": {"name": "Minimum Year Built", "type": "number", "unit": ""},
-        "pool": {"name": "Pool Desired", "type": "boolean", "unit": ""},
-        "fireplace": {"name": "Fireplace", "type": "boolean", "unit": ""},
-        "hardwood_floors": {"name": "Hardwood Floors", "type": "boolean", "unit": ""},
-        "updated_kitchen": {"name": "Updated Kitchen", "type": "boolean", "unit": ""},
-        "move_in_ready": {"name": "Move-in Ready", "type": "boolean", "unit": ""},
-    },
-    "🌟 Lifestyle": {
-        "entertaining_space": {"name": "Good for Entertaining", "type": "boolean", "unit": ""},
-        "private_yard": {"name": "Private Backyard", "type": "boolean", "unit": ""},
-        "pet_friendly": {"name": "Pet Friendly Yard", "type": "boolean", "unit": ""},
-        "storage_space": {"name": "Lots of Storage", "type": "boolean", "unit": ""},
-        "natural_light": {"name": "Natural Light Important", "type": "boolean", "unit": ""},
-        "energy_efficient": {"name": "Energy Efficient", "type": "boolean", "unit": ""},
-    }
-}
+GROQ_MODEL = "llama3-70b-8192"
 
 class HouseProfileGenerator:
-    """Generate ideal house profiles based on selected parameters"""
+    """Generate ideal house profiles based on selected parameters from parameter workshop"""
     
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -76,91 +38,120 @@ class HouseProfileGenerator:
             "Content-Type": "application/json"
         }
     
-    def create_profile_prompt(self, selected_params: Dict, user_context: Dict) -> str:
-        """Create a prompt for generating house profile"""
+    def create_profile_prompt(self, selected_params: Dict, user_context: Dict, param_weights: Dict) -> str:
+        """Create a prompt for generating house profile using workshop parameters"""
         
-        prompt = f"""Based on the following home buyer preferences, create a detailed but practical house profile that can be used to search on Zillow and other real estate sites.
+        prompt = f"""Based on the following home buyer preferences and scientific parameter analysis, create a detailed house profile for real estate searching.
 
 BUYER CONTEXT:
 - Buyer Type: {user_context.get('buyer_type', 'Not specified')}
 - Timeline: {user_context.get('timeline', 'Not specified')}
 - Work Situation: {user_context.get('work_situation', 'Not specified')}
+- Budget Flexibility: {user_context.get('budget_flexibility', 'Not specified')}
 
-SPECIFIC REQUIREMENTS:
+PRIORITIZED PARAMETERS (by importance weight):
 """
         
-        # Organize parameters by category
-        for category, params in selected_params.items():
-            if params:
+        # Sort parameters by weight (highest first)
+        sorted_params = sorted(param_weights.items(), key=lambda x: x[1], reverse=True)
+        
+        for param_key, weight in sorted_params[:15]:  # Top 15 parameters
+            param_info = self._find_param_info(param_key)
+            if param_info and param_key in selected_params:
+                param_value = selected_params[param_key]
+                prompt += f"- {param_info['name']} (Weight: {weight:.1%}): {param_value}\n"
+        
+        prompt += f"""
+SELECTED REQUIREMENTS BY CATEGORY:
+"""
+        
+        # Organize by category for clarity
+        for category, params in PARAMETERS.items():
+            category_params = {k: v for k, v in selected_params.items() if k in params}
+            if category_params:
                 prompt += f"\n{category}:\n"
-                for param_key, param_value in params.items():
-                    if param_value is not None and param_value != "":
-                        param_info = self._find_param_info(param_key)
-                        if param_info:
-                            if param_info['type'] == 'boolean' and param_value:
-                                prompt += f"- Must have: {param_info['name']}\n"
-                            else:
-                                prompt += f"- {param_info['name']}: {param_value} {param_info.get('unit', '')}\n"
+                for param_key, param_value in category_params.items():
+                    param_info = params[param_key]
+                    weight = param_weights.get(param_key, 0)
+                    if weight > 0:
+                        prompt += f"  - {param_info['name']}: {param_value} (Priority: {weight:.1%})\n"
         
         prompt += """
-Please provide:
 
-1. SEARCH KEYWORDS (5-10 specific terms to use on Zillow)
-   - Focus on features that are searchable/filterable
-   - Include specific neighborhood names, features, styles
+Please provide a comprehensive house hunting profile with:
+
+1. ZILLOW SEARCH STRATEGY
+   - Specific search terms and filters to use
+   - Price range, size, year built, and feature filters
+   - Geographic areas to focus on
 
 2. IDEAL HOUSE DESCRIPTION (2-3 paragraphs)
-   - Write as if describing an actual listing
-   - Include specific features, layout, and characteristics
-   - Be specific about what to look for
+   - Specific features and characteristics to look for
+   - Layout preferences and must-have elements
+   - Neighborhood and location requirements
 
-3. MUST-HAVE FEATURES (Bullet list)
-   - List the non-negotiable features
-   - Be specific (e.g., "3-car garage" not just "garage")
+3. MUST-HAVE FEATURES (Ranked by Priority)
+   - Non-negotiable requirements based on highest-weighted parameters
+   - Specific measurable criteria (e.g., "3+ car garage" not just "garage")
 
-4. NICE-TO-HAVE FEATURES (Bullet list)
-   - Features that would be bonuses
-   - Things to prioritize if choosing between similar houses
+4. HIGHLY PREFERRED FEATURES
+   - Features that would significantly increase desirability
+   - Secondary requirements that add value
 
-5. RED FLAGS TO AVOID
-   - Specific things that would make a house unsuitable
-   - Common issues to watch for
+5. NICE-TO-HAVE FEATURES  
+   - Bonus features that would be appreciated
+   - Features that could break ties between similar properties
 
-6. EXAMPLE ZILLOW SEARCH FILTERS
-   - Specific filter settings to use
-   - Price range, square footage, year built, etc.
+6. RED FLAGS TO AVOID
+   - Specific dealbreakers based on your parameters
+   - Common issues to watch for that conflict with your priorities
 
-7. TARGET NEIGHBORHOODS & WHY
-   - Specific areas that match the criteria
-   - Brief explanation of why each fits
+7. SCORING WEIGHTS FOR HOUSE EVALUATION
+   - How to weight different factors when comparing houses
+   - Suggested point system for ranking properties
 
-Format the response in a clear, practical way that someone can immediately use to search for houses."""
+8. NEGOTIATION STRATEGY
+   - What to emphasize based on your priorities
+   - Market conditions to leverage
+   - Inspection focus areas
+
+9. RECOMMENDED SEARCH AREAS
+   - Specific neighborhoods that match your criteria
+   - Areas to avoid and why
+   - Up-and-coming areas to consider
+
+10. LONG-TERM CONSIDERATIONS
+    - How this house fits your timeline and goals
+    - Resale factors based on your priorities
+    - Future needs to anticipate
+
+Format as a professional, actionable house hunting guide."""
         
         return prompt
     
     def _find_param_info(self, param_key: str) -> Dict:
-        """Find parameter info from the structure"""
+        """Find parameter info from the PARAMETERS structure"""
         for category, params in PARAMETERS.items():
             if param_key in params:
                 return params[param_key]
         return None
     
-    def generate_profile(self, selected_params: Dict, user_context: Dict) -> Dict:
+    def generate_profile(self, selected_params: Dict, user_context: Dict, param_weights: Dict) -> Dict:
         """Generate house profile using Groq"""
         
-        prompt = self.create_profile_prompt(selected_params, user_context)
+        prompt = self.create_profile_prompt(selected_params, user_context, param_weights)
         
         data = {
             "model": GROQ_MODEL,
             "messages": [
                 {
                     "role": "system", 
-                    "content": "You are an expert real estate advisor who helps people find their perfect home. You provide practical, specific advice that can be immediately used on house hunting websites."
+                    "content": "You are an expert real estate advisor who creates detailed, scientific house hunting strategies. Your recommendations are based on data-driven parameter analysis and real market knowledge."
                 },
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 2000
+            "max_tokens": 3000
         }
         
         try:
@@ -181,273 +172,179 @@ Format the response in a clear, practical way that someone can immediately use t
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    def generate_search_query(self, selected_params: Dict) -> str:
-        """Generate a Zillow-ready search query"""
+    def generate_zillow_filters(self, selected_params: Dict, param_weights: Dict) -> Dict:
+        """Generate specific Zillow search filters from parameters"""
         
-        queries = []
+        filters = {}
         
-        # Price range
-        if 'min_price' in selected_params.get('💰 Budget & Value', {}):
-            min_p = selected_params['💰 Budget & Value']['min_price']
-            max_p = selected_params['💰 Budget & Value'].get('max_price', min_p + 100000)
-            queries.append(f"${min_p:,}-${max_p:,}")
+        # Budget filters
+        if 'min_price' in selected_params:
+            filters['min_price'] = selected_params['min_price']
+        if 'max_price' in selected_params:
+            filters['max_price'] = selected_params['max_price']
         
-        # Bedrooms
-        if 'bedrooms' in selected_params.get('🏠 Size & Layout', {}):
-            beds = selected_params['🏠 Size & Layout']['bedrooms']
-            queries.append(f"{int(beds)}+ beds")
+        # Size filters
+        if 'bedrooms' in selected_params:
+            filters['min_beds'] = selected_params['bedrooms']
+        if 'bathrooms' in selected_params:
+            filters['min_baths'] = selected_params['bathrooms']
+        if 'min_sqft' in selected_params:
+            filters['min_sqft'] = selected_params['min_sqft']
+        if 'max_sqft' in selected_params:
+            filters['max_sqft'] = selected_params['max_sqft']
         
-        # Square footage
-        if 'min_sqft' in selected_params.get('🏠 Size & Layout', {}):
-            sqft = selected_params['🏠 Size & Layout']['min_sqft']
-            queries.append(f"{int(sqft)}+ sqft")
+        # Age filters
+        if 'year_built_min' in selected_params:
+            filters['min_year'] = selected_params['year_built_min']
         
-        # Neighborhoods
-        if 'neighborhoods' in selected_params.get('📍 Location', {}):
-            areas = selected_params['📍 Location']['neighborhoods']
-            if areas:
-                queries.append(f"{', '.join(areas[:2])} area")
+        # Location filters
+        if 'neighborhoods' in selected_params:
+            filters['neighborhoods'] = selected_params['neighborhoods']
         
-        return " ".join(queries)
+        # Feature filters
+        feature_filters = []
+        if selected_params.get('garage_spaces', 0) > 0:
+            feature_filters.append(f"{selected_params['garage_spaces']}+ car garage")
+        if selected_params.get('pool'):
+            feature_filters.append("pool")
+        if selected_params.get('fireplace'):
+            feature_filters.append("fireplace")
+        if selected_params.get('hardwood_floors'):
+            feature_filters.append("hardwood floors")
+        
+        if feature_filters:
+            filters['keywords'] = " ".join(feature_filters)
+        
+        return filters
 
-def create_parameter_form():
-    """Create the parameter selection form"""
+def create_integrated_parameter_form():
+    """Create parameter form using the workshop structure"""
     
-    st.header("🎯 Define Your Dream Home")
+    st.header("🎯 Define Your Dream Home Profile")
     
-    # User context
-    with st.expander("👤 Tell us about yourself", expanded=True):
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            buyer_type = st.selectbox(
-                "I am a...",
-                ["First-time buyer", "Growing family", "Downsizing", "Investor", 
-                 "Remote worker", "Retiree", "Other"]
-            )
-        
-        with col2:
-            timeline = st.selectbox(
-                "Planning to buy...",
-                ["ASAP", "1-3 months", "3-6 months", "6-12 months", "Just browsing"]
-            )
-        
-        with col3:
-            work_situation = st.selectbox(
-                "Work situation",
-                ["Office downtown", "Hybrid", "Fully remote", "Multiple locations", "Retired"]
-            )
+    # Use the parameter workshop quiz
+    answers = parameter_selection_quiz()
     
-    user_context = {
-        "buyer_type": buyer_type,
-        "timeline": timeline,
-        "work_situation": work_situation
-    }
-    
-    # Parameter selection
-    selected_params = {}
-    
-    for category, params in PARAMETERS.items():
-        with st.expander(f"{category}", expanded=(category == "💰 Budget & Value")):
-            selected_params[category] = {}
+    # Get recommendations based on answers
+    if st.button("🧠 Analyze My Preferences", type="primary"):
+        if len(answers.get('priorities', [])) < 3:
+            st.error("Please select at least 3 lifestyle priorities!")
+            return None, None, None
+        else:
+            recommendations = recommend_parameters(answers)
             
-            # Create appropriate input for each parameter type
-            cols = st.columns(2)
-            for i, (param_key, param_info) in enumerate(params.items()):
-                col = cols[i % 2]
+            # Convert recommendations to selected parameters format
+            selected_params = {}
+            param_weights = {}
+            
+            # Assign weights based on priority level
+            high_weight = 0.6 / max(len(recommendations["high_priority"]), 1)
+            medium_weight = 0.3 / max(len(recommendations["medium_priority"]), 1)
+            low_weight = 0.1 / max(len(recommendations["low_priority"]), 1)
+            
+            # Add high priority parameters
+            for param in recommendations["high_priority"]:
+                param_info = None
+                for category, params in PARAMETERS.items():
+                    if param in params:
+                        param_info = params[param]
+                        break
                 
-                with col:
+                if param_info:
+                    # Set default values based on parameter type
                     if param_info['type'] == 'number':
-                        if param_key == 'max_price':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=100000,
-                                max_value=2000000,
-                                value=500000,
-                                step=25000,
-                                help=f"Amount in {param_info['unit']}"
-                            )
-                        elif param_key == 'min_price':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=100000,
-                                max_value=2000000,
-                                value=300000,
-                                step=25000,
-                                help=f"Amount in {param_info['unit']}"
-                            )
-                        elif param_key == 'min_sqft':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=500,
-                                max_value=10000,
-                                value=1500,
-                                step=100,
-                                help=f"Size in {param_info['unit']}"
-                            )
-                        elif param_key == 'bedrooms':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=1,
-                                max_value=8,
-                                value=3
-                            )
-                        elif param_key == 'bathrooms':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=1.0,
-                                max_value=6.0,
-                                value=2.0,
-                                step=0.5
-                            )
-                        elif param_key == 'year_built_min':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=1900,
-                                max_value=2025,
-                                value=2000,
-                                step=5
-                            )
-                        elif param_key == 'garage_spaces':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=0,
-                                max_value=5,
-                                value=2,
-                                help=f"Number of {param_info['unit']}"
-                            )
-                        elif param_key == 'lot_size':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=0,
-                                max_value=50000,
-                                value=7500,
-                                step=500,
-                                help=f"Size in {param_info['unit']}"
-                            )
-                        elif param_key == 'max_commute':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=5,
-                                max_value=90,
-                                value=30,
-                                step=5,
-                                help=f"Time in {param_info['unit']}"
-                            )
-                        elif param_key == 'school_rating':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=1,
-                                max_value=10,
-                                value=7,
-                                help="Rating out of 10"
-                            )
-                        elif param_key == 'property_taxes':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=0,
-                                max_value=50000,
-                                value=5000,
-                                step=500,
-                                help=f"Amount in {param_info['unit']}"
-                            )
-                        elif param_key == 'price_per_sqft':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=50,
-                                max_value=500,
-                                value=200,
-                                step=10,
-                                help=f"Price in {param_info['unit']}"
-                            )
-                        elif param_key == 'max_sqft':
-                            value = st.number_input(
-                                param_info['name'],
-                                min_value=500,
-                                max_value=10000,
-                                value=3000,
-                                step=100,
-                                help=f"Size in {param_info['unit']}"
-                            )
+                        if 'price' in param:
+                            selected_params[param] = 400000 if 'max' in param else 300000
+                        elif 'sqft' in param:
+                            selected_params[param] = 1500
+                        elif 'bedrooms' in param:
+                            selected_params[param] = 3
+                        elif 'year' in param:
+                            selected_params[param] = 2000
                         else:
-                            value = st.number_input(
-                                param_info['name'], 
-                                min_value=0,
-                                help=f"Value in {param_info.get('unit', 'units')}" if param_info.get('unit') else None
-                            )
-                        
-                        if value > 0:
-                            selected_params[category][param_key] = value
-                    
+                            selected_params[param] = 1
                     elif param_info['type'] == 'boolean':
-                        value = st.checkbox(param_info['name'])
-                        if value:
-                            selected_params[category][param_key] = value
+                        selected_params[param] = True
+                    else:
+                        selected_params[param] = "preferred"
                     
-                    elif param_info['type'] == 'choice':
-                        value = st.selectbox(param_info['name'], param_info['options'])
-                        if value != "Any":
-                            selected_params[category][param_key] = value
-                    
-                    elif param_info['type'] == 'multiselect':
-                        value = st.multiselect(param_info['name'], param_info['options'])
-                        if value:
-                            selected_params[category][param_key] = value
+                    param_weights[param] = high_weight
+            
+            # Add medium and low priority parameters with lower weights
+            for param in recommendations["medium_priority"]:
+                if param not in param_weights:  # Avoid duplicates
+                    param_weights[param] = medium_weight
+                    selected_params[param] = "moderate_preference"
+            
+            for param in recommendations["low_priority"]:
+                if param not in param_weights:  # Avoid duplicates
+                    param_weights[param] = low_weight
+                    selected_params[param] = "nice_to_have"
+            
+            st.session_state.selected_params = selected_params
+            st.session_state.param_weights = param_weights
+            st.session_state.user_context = answers
+            st.success("✅ Analysis complete! Your personalized profile is ready.")
+            
+            return selected_params, param_weights, answers
     
-    # Quick presets
-    st.markdown("### ⚡ Quick Presets")
+    return None, None, None
+
+def display_house_profile(profile_text: str, selected_params: Dict, param_weights: Dict):
+    """Display the generated house profile with enhanced features"""
+    
+    st.header("🏡 Your Personalized House Hunting Profile")
+    
+    # Quick summary metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("👨‍👩‍👧‍👦 Family Home"):
-            selected_params['🏠 Size & Layout']['bedrooms'] = 4
-            selected_params['🏠 Size & Layout']['bathrooms'] = 2.5
-            selected_params['🏠 Size & Layout']['min_sqft'] = 2000
-            selected_params['📍 Location']['school_rating'] = 8
-            st.rerun()
-    
+        st.metric("Parameters Analyzed", len(param_weights))
     with col2:
-        if st.button("💼 Young Professional"):
-            selected_params['💰 Budget & Value']['max_price'] = 350000
-            selected_params['🏠 Size & Layout']['bedrooms'] = 2
-            selected_params['📍 Location']['walkability'] = True
-            selected_params['📍 Location']['max_commute'] = 30
-            st.rerun()
-    
+        high_priority_count = len([w for w in param_weights.values() if w > 0.05])
+        st.metric("High Priority Items", high_priority_count)
     with col3:
-        if st.button("🏡 Empty Nester"):
-            selected_params['🏠 Size & Layout']['stories'] = "Single"
-            selected_params['🏠 Size & Layout']['master_main_floor'] = True
-            selected_params['🏠 Size & Layout']['bedrooms'] = 2
-            st.rerun()
-    
+        if 'max_price' in selected_params:
+            st.metric("Max Budget", f"${selected_params['max_price']:,}")
+        else:
+            st.metric("Budget", "Custom")
     with col4:
-        if st.button("💻 Remote Worker"):
-            selected_params['🏠 Size & Layout']['home_office'] = True
-            selected_params['📍 Location']['quiet_street'] = True
-            selected_params['🌟 Lifestyle']['natural_light'] = True
-            st.rerun()
+        if 'neighborhoods' in selected_params:
+            st.metric("Target Areas", len(selected_params['neighborhoods']))
+        else:
+            st.metric("Areas", "All")
     
-    return selected_params, user_context
-
-def display_house_profile(profile_text: str, selected_params: Dict):
-    """Display the generated house profile"""
-    
-    st.header("🏡 Your Ideal House Profile")
-    
-    # Quick search query
-    generator = HouseProfileGenerator("")  # Don't need API key for this
-    search_query = generator.generate_search_query(selected_params)
-    
-    if search_query:
-        st.info(f"**Quick Zillow Search:** {search_query}")
-        
-        # Direct Zillow search link
-        zillow_url = f"https://www.zillow.com/homes/{search_query.replace(' ', '-').replace(',', '')}_rb/"
-        st.markdown(f"[🔍 Search on Zillow]({zillow_url})")
-    
-    # Display the full profile
+    # Display the profile
+    st.markdown("### 📋 Your Complete House Hunting Guide")
     st.markdown(profile_text)
+    
+    # Generate Zillow filters
+    generator = HouseProfileGenerator("")  # Don't need API key for this
+    zillow_filters = generator.generate_zillow_filters(selected_params, param_weights)
+    
+    if zillow_filters:
+        st.markdown("### 🔍 Ready-to-Use Zillow Search Filters")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.json(zillow_filters)
+        
+        with col2:
+            # Create direct Zillow search URL
+            url_parts = []
+            if 'min_price' in zillow_filters:
+                url_parts.append(f"price_min={zillow_filters['min_price']}")
+            if 'max_price' in zillow_filters:
+                url_parts.append(f"price_max={zillow_filters['max_price']}")
+            if 'min_beds' in zillow_filters:
+                url_parts.append(f"beds_min={zillow_filters['min_beds']}")
+            if 'min_baths' in zillow_filters:
+                url_parts.append(f"baths_min={zillow_filters['min_baths']}")
+            
+            if url_parts:
+                zillow_url = f"https://www.zillow.com/minneapolis-mn/?" + "&".join(url_parts)
+                st.markdown(f"[🏠 Search Zillow Now]({zillow_url})")
     
     # Action buttons
     col1, col2, col3 = st.columns(3)
@@ -469,40 +366,36 @@ def display_house_profile(profile_text: str, selected_params: Dict):
     
     with col3:
         # Save parameters
-        param_json = json.dumps(selected_params, indent=2)
+        config = {
+            "selected_params": selected_params,
+            "param_weights": param_weights,
+            "user_context": st.session_state.get('user_context', {}),
+            "generated_date": timestamp
+        }
+        param_json = json.dumps(config, indent=2)
         st.download_button(
-            "⚙️ Save Parameters",
+            "⚙️ Save Configuration",
             param_json,
-            file_name=f"house_params_{timestamp}.json",
+            file_name=f"house_config_{timestamp}.json",
             mime="application/json"
         )
 
 def main():
     """Main application"""
     
-    st.set_page_config(
-        page_title="AI House Profile Generator",
-        page_icon="🏡",
-        layout="wide"
-    )
-    
     st.title("🏡 AI-Powered House Profile Generator")
-    st.markdown("*Define your preferences and get a detailed profile of your ideal home*")
+    st.markdown("*Scientific parameter analysis meets personalized house hunting*")
     
-    # Load API key from environment
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    # Try to get API key from environment first
+    # Load API key
     api_key = os.getenv('GROQ_API_KEY') or os.getenv('RAPIDAPI_KEY')
     
-    # If not in environment, allow manual input
     if not api_key:
-        api_key = st.sidebar.text_input(
-            "Groq API Key",
-            type="password",
-            help="Get your free API key at console.groq.com"
-        )
+        with st.sidebar:
+            api_key = st.text_input(
+                "Groq API Key",
+                type="password",
+                help="Get your free API key at console.groq.com"
+            )
         
         if not api_key:
             st.warning("👈 Please enter your Groq API key in the sidebar to generate profiles")
@@ -512,79 +405,91 @@ def main():
             2. Sign up for a free account
             3. Create an API key
             4. Paste it in the sidebar
-            
-            Or add it to your .env file as:
-            GROQ_API_KEY=your_api_key_here
             """)
     else:
-        st.sidebar.success("✅ API key loaded from .env file")
-        st.sidebar.caption(f"Key: {api_key[:8]}...")
+        st.sidebar.success("✅ API key loaded")
     
-    # Parameter selection
-    selected_params, user_context = create_parameter_form()
+    # Main interface
+    tab1, tab2, tab3 = st.tabs(["🎯 Create Profile", "📊 Parameter Analysis", "💾 Saved Profiles"])
     
-    # Show selected parameters summary
-    with st.sidebar:
-        st.markdown("### 📊 Selected Parameters")
+    with tab1:
+        # Parameter selection using workshop
+        selected_params, param_weights, user_context = create_integrated_parameter_form()
         
-        param_count = sum(len(params) for params in selected_params.values())
-        st.metric("Total Parameters", param_count)
-        
-        # Show key selections
-        if selected_params.get('💰 Budget & Value', {}).get('max_price'):
-            st.write(f"**Budget:** ${selected_params['💰 Budget & Value']['max_price']:,}")
-        
-        if selected_params.get('🏠 Size & Layout', {}).get('bedrooms'):
-            beds = selected_params['🏠 Size & Layout']['bedrooms']
-            baths = selected_params['🏠 Size & Layout'].get('bathrooms', 0)
-            st.write(f"**Size:** {int(beds)} bed, {baths} bath")
-        
-        if selected_params.get('📍 Location', {}).get('neighborhoods'):
-            areas = selected_params['📍 Location']['neighborhoods']
-            st.write(f"**Areas:** {', '.join(areas[:3])}")
+        # Generate profile if we have parameters
+        if (hasattr(st.session_state, 'selected_params') and 
+            hasattr(st.session_state, 'param_weights') and
+            api_key):
+            
+            if st.button("🎨 Generate My House Profile", type="primary"):
+                with st.spinner("Creating your personalized house profile..."):
+                    generator = HouseProfileGenerator(api_key)
+                    result = generator.generate_profile(
+                        st.session_state.selected_params,
+                        st.session_state.user_context,
+                        st.session_state.param_weights
+                    )
+                    
+                    if result['success']:
+                        st.session_state.generated_profile = result['profile']
+                        st.success("✅ Profile generated successfully!")
+                    else:
+                        st.error(f"Error generating profile: {result['error']}")
     
-    # Generate profile button
-    if st.button("🎨 Generate My House Profile", type="primary", disabled=not api_key):
-        if param_count < 5:
-            st.error("Please select at least 5 parameters to generate a meaningful profile")
-        else:
-            with st.spinner("Creating your personalized house profile..."):
-                generator = HouseProfileGenerator(api_key)
-                result = generator.generate_profile(selected_params, user_context)
+    with tab2:
+        if hasattr(st.session_state, 'param_weights'):
+            st.header("📊 Your Parameter Analysis")
+            
+            # Create visualization of parameter weights
+            weight_df = pd.DataFrame([
+                {"Parameter": param, "Weight": weight, "Category": "High" if weight > 0.05 else "Medium" if weight > 0.02 else "Low"}
+                for param, weight in st.session_state.param_weights.items()
+            ]).sort_values('Weight', ascending=False)
+            
+            # Show top parameters
+            st.subheader("🎯 Your Top Priorities")
+            for _, row in weight_df.head(10).iterrows():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    param_info = None
+                    for category, params in PARAMETERS.items():
+                        if row['Parameter'] in params:
+                            param_info = params[row['Parameter']]
+                            break
+                    
+                    param_name = param_info['name'] if param_info else row['Parameter']
+                    st.write(f"**{param_name}**")
+                    if param_info:
+                        st.caption(param_info['description'])
                 
-                if result['success']:
-                    st.session_state.generated_profile = result['profile']
-                    st.session_state.selected_params = selected_params
-                else:
-                    st.error(f"Error generating profile: {result['error']}")
+                with col2:
+                    st.metric("Weight", f"{row['Weight']:.1%}")
+            
+        else:
+            st.info("Complete the profile creation to see your parameter analysis")
+    
+    with tab3:
+        st.header("💾 Saved Profiles")
+        st.info("Upload a previously saved configuration to recreate a profile")
+        
+        uploaded_file = st.file_uploader("Upload Configuration", type=['json'])
+        if uploaded_file:
+            try:
+                config = json.load(uploaded_file)
+                st.session_state.selected_params = config['selected_params']
+                st.session_state.param_weights = config['param_weights']
+                st.session_state.user_context = config['user_context']
+                st.success("✅ Configuration loaded! Go to 'Create Profile' tab to generate.")
+            except Exception as e:
+                st.error(f"Error loading configuration: {e}")
     
     # Display generated profile
-    if 'generated_profile' in st.session_state:
+    if hasattr(st.session_state, 'generated_profile'):
         display_house_profile(
             st.session_state.generated_profile,
-            st.session_state.selected_params
+            st.session_state.selected_params,
+            st.session_state.param_weights
         )
-    
-    # Examples section
-    with st.expander("📚 Example Use Cases"):
-        st.markdown("""
-        ### How to use your generated profile:
-        
-        1. **On Zillow:**
-           - Copy the search keywords into Zillow's search bar
-           - Use the filter settings provided
-           - Save searches with these criteria for alerts
-        
-        2. **With Real Estate Agents:**
-           - Share your profile with agents
-           - They'll understand exactly what you're looking for
-           - No more seeing irrelevant houses
-        
-        3. **For Comparison:**
-           - Use the must-have list as a checklist
-           - Score houses based on how many criteria they meet
-           - Identify deal-breakers quickly
-        """)
 
 if __name__ == "__main__":
     main()
