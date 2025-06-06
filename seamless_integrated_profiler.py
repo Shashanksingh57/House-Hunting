@@ -1,5 +1,6 @@
-# seamless_integrated_profiler.py
+# seamless_integrated_profiler_fixed.py
 # Complete workflow: Quiz → Parameter Analysis → AI Profile Generation
+# Fixed version that doesn't require external parameter_definitions.py
 
 import streamlit as st
 
@@ -18,15 +19,198 @@ from typing import Dict, List
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Import the clean parameter definitions
-from parameter_definitions import PARAMETERS, DEFAULT_PARAMETER_VALUES
-
 # Load environment variables
 load_dotenv()
 
 # Groq API configuration
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama3-70b-8192"
+
+# Embedded parameter definitions (no external imports needed)
+PARAMETERS = {
+    "💰 Financial & Market": {
+        "purchase_price": {
+            "name": "Purchase Price",
+            "description": "The listing price of the house",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": "$"
+        },
+        "price_per_sqft": {
+            "name": "Price per Square Foot",
+            "description": "Value metric compared to area average",
+            "data_availability": "✅ Calculated",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": "$/sqft"
+        },
+        "total_monthly_cost": {
+            "name": "Total Monthly Cost",
+            "description": "Mortgage + taxes + insurance + utilities estimate",
+            "data_availability": "🔶 Estimated",
+            "implementation": "Medium",
+            "impact": "Very High",
+            "type": "number",
+            "unit": "$/month"
+        },
+        "property_taxes": {
+            "name": "Property Tax Amount",
+            "description": "Annual property taxes for the home",
+            "data_availability": "✅ Public records",
+            "implementation": "Medium",
+            "impact": "High",
+            "type": "number",
+            "unit": "$/year"
+        }
+    },
+    "🏘️ Location & Neighborhood": {
+        "commute_time": {
+            "name": "Commute Time",
+            "description": "Travel time to work/downtown",
+            "data_availability": "✅ Calculated",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": "minutes"
+        },
+        "school_ratings": {
+            "name": "School Quality",
+            "description": "Elementary, middle, and high school ratings",
+            "data_availability": "🔶 GreatSchools API",
+            "implementation": "Medium",
+            "impact": "High",
+            "type": "number",
+            "unit": "/10"
+        },
+        "walkability": {
+            "name": "Walk Score",
+            "description": "Ability to walk to amenities",
+            "data_availability": "✅ Walk Score API",
+            "implementation": "Medium",
+            "impact": "Medium",
+            "type": "number",
+            "unit": "/100"
+        },
+        "crime_rate": {
+            "name": "Crime Statistics",
+            "description": "Area crime rates and safety",
+            "data_availability": "✅ Crime APIs",
+            "implementation": "Medium",
+            "impact": "High",
+            "type": "number",
+            "unit": "incidents/1000"
+        },
+        "neighborhood_quality": {
+            "name": "Neighborhood Desirability",
+            "description": "Overall neighborhood appeal and reputation",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "choice",
+            "options": ["Excellent", "Very Good", "Good", "Fair", "Poor"]
+        }
+    },
+    "🏠 Property Features": {
+        "square_footage": {
+            "name": "Total Square Footage",
+            "description": "Total living space",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": "sqft"
+        },
+        "bedrooms": {
+            "name": "Number of Bedrooms",
+            "description": "Total bedroom count",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": ""
+        },
+        "bathrooms": {
+            "name": "Number of Bathrooms",
+            "description": "Full and half bathrooms",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "High",
+            "type": "number",
+            "unit": ""
+        },
+        "garage_spaces": {
+            "name": "Garage Spaces",
+            "description": "Number of covered parking spots",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "Medium",
+            "type": "number",
+            "unit": "cars"
+        },
+        "year_built": {
+            "name": "Year Built / Age",
+            "description": "Age of the house",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "Medium",
+            "type": "number",
+            "unit": ""
+        },
+        "home_office": {
+            "name": "Office Space",
+            "description": "Dedicated room for home office",
+            "data_availability": "🔶 Listing details",
+            "implementation": "Medium",
+            "impact": "Medium",
+            "type": "boolean",
+            "unit": ""
+        }
+    },
+    "🌳 Lot & Outdoor": {
+        "lot_size": {
+            "name": "Lot Size",
+            "description": "Total lot square footage",
+            "data_availability": "✅ Available",
+            "implementation": "Easy",
+            "impact": "Medium",
+            "type": "number",
+            "unit": "sqft"
+        },
+        "privacy_level": {
+            "name": "Privacy",
+            "description": "Distance from neighbors, fencing",
+            "data_availability": "🔶 Photos/satellite",
+            "implementation": "Medium",
+            "impact": "Medium",
+            "type": "choice",
+            "options": ["Very Private", "Private", "Moderate", "Open"]
+        }
+    }
+}
+
+# Default parameter values
+DEFAULT_PARAMETER_VALUES = {
+    "purchase_price": 350000,
+    "price_per_sqft": 200,
+    "total_monthly_cost": 2500,
+    "property_taxes": 5000,
+    "commute_time": 25,
+    "school_ratings": 8.0,
+    "walkability": 70,
+    "crime_rate": 2.0,
+    "square_footage": 1800,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "garage_spaces": 2,
+    "year_built": 2010,
+    "lot_size": 8000,
+    "home_office": True,
+    "neighborhood_quality": "Very Good",
+    "privacy_level": "Private"
+}
 
 class ParameterAnalyzer:
     """Analyzes quiz responses and generates weighted parameters"""
@@ -35,38 +219,7 @@ class ParameterAnalyzer:
         self.parameters = PARAMETERS
         self.default_values = DEFAULT_PARAMETER_VALUES
     
-    def analyze_quiz_responses(self, answers: Dict) -> tuple:
-        """Convert quiz answers into weighted parameters and selected values"""
-        
-        selected_params = {}
-        param_weights = {}
-        
-        # Get base recommendations
-        recommendations = self._recommend_parameters_from_answers(answers)
-        
-        # Assign weights based on priority levels
-        high_weight = 0.6 / max(len(recommendations["high_priority"]), 1)
-        medium_weight = 0.3 / max(len(recommendations["medium_priority"]), 1)
-        low_weight = 0.1 / max(len(recommendations["low_priority"]), 1)
-        
-        # Process high priority parameters
-        for param in recommendations["high_priority"]:
-            param_weights[param] = high_weight
-            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "high")
-        
-        # Process medium priority parameters  
-        for param in recommendations["medium_priority"]:
-            param_weights[param] = medium_weight
-            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "medium")
-        
-        # Process low priority parameters
-        for param in recommendations["low_priority"]:
-            param_weights[param] = low_weight
-            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "low")
-        
-        return selected_params, param_weights, recommendations
-    
-    def _recommend_parameters_from_answers(self, answers: Dict) -> Dict:
+    def recommend_parameters_from_answers(self, answers: Dict) -> Dict:
         """Generate parameter recommendations based on quiz answers"""
         
         recommendations = {
@@ -79,11 +232,11 @@ class ParameterAnalyzer:
         core_params = ["purchase_price", "square_footage", "bedrooms", "bathrooms"]
         recommendations["high_priority"].extend(core_params)
         
-        # Buyer type specific recommendations
+        # Based on buyer type
         buyer_type_mapping = {
             "First-time buyer": {
                 "high": ["price_per_sqft", "total_monthly_cost", "property_taxes"],
-                "medium": ["year_built", "days_on_market", "neighborhood_quality"],
+                "medium": ["year_built", "neighborhood_quality"],
                 "low": ["walkability"]
             },
             "Family with kids": {
@@ -123,7 +276,7 @@ class ParameterAnalyzer:
                     if param not in recommendations[target_list]:
                         recommendations[target_list].append(param)
         
-        # Work situation adjustments
+        # Based on work situation
         work_situation = answers.get('work_situation', 'Hybrid work')
         if work_situation in ["Fixed office location", "Hybrid work"]:
             if "commute_time" not in recommendations["high_priority"]:
@@ -131,13 +284,12 @@ class ParameterAnalyzer:
         elif work_situation == "Fully remote":
             if "home_office" not in recommendations["high_priority"]:
                 recommendations["high_priority"].append("home_office")
-            # Move commute to low priority for remote workers
             if "commute_time" in recommendations["high_priority"]:
                 recommendations["high_priority"].remove("commute_time")
                 if "commute_time" not in recommendations["low_priority"]:
                     recommendations["low_priority"].append("commute_time")
         
-        # Lifestyle priority adjustments
+        # Based on priorities
         priority_mapping = {
             "Low maintenance": ["year_built"],
             "Good schools": ["school_ratings"],
@@ -148,8 +300,7 @@ class ParameterAnalyzer:
             "Home office": ["home_office", "square_footage"],
             "Storage space": ["square_footage"],
             "Investment potential": ["school_ratings", "neighborhood_quality"],
-            "Energy efficiency": ["year_built"],
-            "Move-in ready": ["year_built"]
+            "Energy efficiency": ["year_built"]
         }
         
         for priority in answers.get('priorities', []):
@@ -162,11 +313,11 @@ class ParameterAnalyzer:
         # Budget flexibility adjustments
         budget_flexibility = answers.get('budget_flexibility', 'Moderate')
         if budget_flexibility == "Very tight":
-            for param in ["total_monthly_cost", "property_taxes", "hoa_fees"]:
+            for param in ["total_monthly_cost", "property_taxes"]:
                 if param not in recommendations["high_priority"]:
                     recommendations["high_priority"].append(param)
         
-        # Remove duplicates and validate all parameters exist
+        # Remove duplicates and limit counts
         all_params = set()
         for priority_level in ["high_priority", "medium_priority", "low_priority"]:
             recommendations[priority_level] = [
@@ -176,11 +327,42 @@ class ParameterAnalyzer:
             all_params.update(recommendations[priority_level])
         
         # Limit to reasonable numbers
-        recommendations["high_priority"] = recommendations["high_priority"][:15]
-        recommendations["medium_priority"] = recommendations["medium_priority"][:12]
-        recommendations["low_priority"] = recommendations["low_priority"][:10]
+        recommendations["high_priority"] = recommendations["high_priority"][:12]
+        recommendations["medium_priority"] = recommendations["medium_priority"][:10]
+        recommendations["low_priority"] = recommendations["low_priority"][:8]
         
         return recommendations
+    
+    def analyze_quiz_responses(self, answers: Dict) -> tuple:
+        """Convert quiz answers into weighted parameters and selected values"""
+        
+        selected_params = {}
+        param_weights = {}
+        
+        # Get base recommendations
+        recommendations = self.recommend_parameters_from_answers(answers)
+        
+        # Assign weights based on priority levels
+        high_weight = 0.6 / max(len(recommendations["high_priority"]), 1)
+        medium_weight = 0.3 / max(len(recommendations["medium_priority"]), 1)
+        low_weight = 0.1 / max(len(recommendations["low_priority"]), 1)
+        
+        # Process high priority parameters
+        for param in recommendations["high_priority"]:
+            param_weights[param] = high_weight
+            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "high")
+        
+        # Process medium priority parameters  
+        for param in recommendations["medium_priority"]:
+            param_weights[param] = medium_weight
+            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "medium")
+        
+        # Process low priority parameters
+        for param in recommendations["low_priority"]:
+            param_weights[param] = low_weight
+            selected_params[param] = self._get_parameter_value_from_answers(param, answers, "low")
+        
+        return selected_params, param_weights, recommendations
     
     def _get_parameter_value_from_answers(self, param: str, answers: Dict, priority: str) -> any:
         """Convert quiz answers into specific parameter values"""
@@ -612,23 +794,6 @@ def display_parameter_analysis(selected_params: Dict, param_weights: Dict, recom
                 # Visual weight bar
                 weight_percent = int(weight * 1000)  # Scale for visibility
                 st.progress(min(weight_percent, 100))
-    
-    # Category breakdown
-    st.subheader("📋 Parameters by Category")
-    
-    category_weights = {}
-    for param_key, weight in param_weights.items():
-        # Find category for this parameter
-        for category, params in PARAMETERS.items():
-            if param_key in params:
-                if category not in category_weights:
-                    category_weights[category] = 0
-                category_weights[category] += weight
-                break
-    
-    # Display category weights
-    for category, total_weight in sorted(category_weights.items(), key=lambda x: x[1], reverse=True):
-        st.write(f"**{category}**: {total_weight:.1%} of total importance")
 
 def main():
     """Main application with seamless workflow"""
@@ -649,8 +814,13 @@ def main():
         
         if not api_key:
             st.warning("👈 Please enter your Groq API key in the sidebar")
-            st.info("Get a free API key at [console.groq.com](https://console.groq.com)")
-            return
+            st.info("""
+            **How to get a free Groq API key:**
+            1. Go to [console.groq.com](https://console.groq.com)
+            2. Sign up for a free account
+            3. Create an API key
+            4. Paste it in the sidebar
+            """)
     else:
         st.sidebar.success("✅ API key loaded")
     
@@ -693,6 +863,10 @@ def main():
         st.markdown("## Step 3: AI Profile Generation")
         
         if st.button("🎨 Generate My House Hunting Profile", type="primary"):
+            if not api_key:
+                st.error("❌ Please enter your Groq API key in the sidebar first!")
+                return
+                
             with st.spinner("Creating your personalized house hunting profile with AI..."):
                 
                 generator = HouseProfileGenerator(api_key)

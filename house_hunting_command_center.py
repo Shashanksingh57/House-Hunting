@@ -1,5 +1,5 @@
 # house_hunting_command_center.py
-# Central hub for all house hunting tools and applications
+# Central hub for all house hunting tools and applications - FIXED VERSION
 
 import streamlit as st
 import subprocess
@@ -59,22 +59,6 @@ st.markdown("""
         margin: 0.5rem 0;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
-    
-    .launch-button {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    
-    .launch-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,14 +95,6 @@ class HouseHuntingHub:
                 "when_to_use": "For initial data gathering or major updates",
                 "port": None
             },
-            "fixed_zillow_collector.py": {
-                "category": "🏠 Data Collection",
-                "name": "Fixed Zillow Collector",
-                "description": "Standalone Zillow data collector with error handling",
-                "purpose": "Collect data with robust error handling",
-                "when_to_use": "When other collectors have issues",
-                "port": None
-            },
             
             # Analytics Tools
             "zillow_data_analytics_dashboard.py": {
@@ -129,63 +105,31 @@ class HouseHuntingHub:
                 "when_to_use": "To analyze trends and see geographic distribution",
                 "port": 8502
             },
-            "live_dashboard.py": {
-                "category": "📊 Analytics & Insights",
-                "name": "Live Scoring Dashboard",
-                "description": "Real-time house scoring and recommendations",
-                "purpose": "View scored houses with AI recommendations",
-                "when_to_use": "To see your top house recommendations",
-                "port": 8503
-            },
             "dynamic_dashboard.py": {
                 "category": "📊 Analytics & Insights",
-                "name": "Dynamic Preferences Dashboard",
-                "description": "Adjust preferences and see results update in real-time",
-                "purpose": "Experiment with different criteria",
-                "when_to_use": "To fine-tune your search parameters",
-                "port": 8506
-            },
-            "streamlit_app.py": {
-                "category": "📊 Analytics & Insights",
-                "name": "Main Streamlit App",
-                "description": "Primary house hunting dashboard",
-                "purpose": "Main interface for house analysis",
-                "when_to_use": "General house hunting interface",
-                "port": 8507
+                "name": "House Ranking Dashboard",
+                "description": "Real-time house scoring and recommendations",
+                "purpose": "Score and rank houses based on your criteria",
+                "when_to_use": "To see scored houses and adjust ranking criteria",
+                "port": 8503
             },
             
             # Configuration Tools
-            "parameter_workshop.py": {
+            "seamless_integrated_profiler.py": {
                 "category": "🎯 Configuration & Setup",
-                "name": "Parameter Workshop",
-                "description": "Configure your house hunting preferences",
-                "purpose": "Set up scoring weights and priorities",
-                "when_to_use": "To customize what's important to you",
+                "name": "Seamless Integrated Profiler",
+                "description": "Complete preference setup and ideal home profiling with AI",
+                "purpose": "Define your dream home criteria and preferences",
+                "when_to_use": "Start here - before any data collection",
                 "port": 8504
             },
             "parameter_workshop_fixed.py": {
                 "category": "🎯 Configuration & Setup",
-                "name": "Parameter Workshop (Fixed)",
+                "name": "Parameter Workshop",
                 "description": "Enhanced parameter configuration tool",
                 "purpose": "Advanced preference configuration",
                 "when_to_use": "For detailed preference setup",
-                "port": 8504
-            },
-            "integrated_house_profiler.py": {
-                "category": "🎯 Configuration & Setup",
-                "name": "AI House Profiler",
-                "description": "Generate ideal house profiles using AI",
-                "purpose": "Create detailed profiles of your dream home",
-                "when_to_use": "To clarify what you're looking for",
                 "port": 8505
-            },
-            "house_personality_classifier.py": {
-                "category": "🎯 Configuration & Setup",
-                "name": "House Personality Classifier",
-                "description": "Classify houses by personality types using AI",
-                "purpose": "Understand house character and style",
-                "when_to_use": "To find houses that match your personality",
-                "port": 8508
             },
             
             # Utilities
@@ -195,30 +139,6 @@ class HouseHuntingHub:
                 "description": "Complete house hunting system with scoring",
                 "purpose": "Comprehensive house analysis tool",
                 "when_to_use": "For complete analysis workflow",
-                "port": None
-            },
-            "quick_start_scorer.py": {
-                "category": "🔧 Utilities & Management",
-                "name": "Quick Start Scorer",
-                "description": "Simple house scoring system",
-                "purpose": "Basic house evaluation",
-                "when_to_use": "For quick house scoring",
-                "port": None
-            },
-            "manual_data_collection.py": {
-                "category": "🔧 Utilities & Management",
-                "name": "Manual Data Collection",
-                "description": "Manually input house data",
-                "purpose": "Add houses manually to your database",
-                "when_to_use": "When you find houses outside API sources",
-                "port": None
-            },
-            "simple_house_collector.py": {
-                "category": "🔧 Utilities & Management",
-                "name": "Simple House Collector",
-                "description": "Basic house data collection tool",
-                "purpose": "Simple data gathering",
-                "when_to_use": "For basic data collection needs",
                 "port": None
             }
         }
@@ -249,21 +169,6 @@ class HouseHuntingHub:
                 organized_tools[category][file] = tool_copy
         
         return organized_tools
-        
-        # Check which files actually exist
-        available_tools = {}
-        for category, category_tools in tools.items():
-            available_category = {}
-            for filename, tool_info in category_tools.items():
-                if os.path.exists(filename):
-                    tool_info["available"] = True
-                    available_category[filename] = tool_info
-                else:
-                    tool_info["available"] = False
-                    available_category[filename] = tool_info
-            available_tools[category] = available_category
-        
-        return available_tools
     
     def check_system_status(self):
         """Check system requirements and setup"""
@@ -450,6 +355,143 @@ def display_system_status(hub):
             for key in missing_keys:
                 st.write(f"• Add `{key}=your_key_here` to your .env file")
 
+def display_workflow_tools(hub):
+    """Display tools in logical workflow order"""
+    
+    st.header("🛠️ House Hunting Workflow")
+    st.markdown("*Follow this sequence for optimal house hunting*")
+    
+    # Step 1: Define Your Ideal Home
+    st.subheader("1️⃣ Define Your Ideal Home")
+    st.markdown("*Start here to clarify what you're looking for*")
+    
+    profiler_files = [
+        "seamless_integrated_profiler.py",
+        "integrated_house_profiler.py",
+        "parameter_workshop_fixed.py"
+    ]
+    
+    profiler_file = None
+    for filename in profiler_files:
+        if os.path.exists(filename):
+            profiler_file = filename
+            break
+    
+    if profiler_file:
+        tool_info = hub.tools.get("🎯 Configuration & Setup", {}).get(profiler_file, {
+            "name": "Profile Setup Tool",
+            "description": "Set up your house hunting preferences",
+            "port": 8504,
+            "available": True
+        })
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <div class="tool-card status-good">
+                <h4>✅ {tool_info['name']}</h4>
+                <p><strong>Purpose:</strong> Define your dream home criteria and preferences</p>
+                <p><strong>When to use:</strong> Start here before any data collection</p>
+                <p><em>{tool_info['description']}</em></p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("🚀 Launch Profiler", key="profiler_launch"):
+                success, message = hub.launch_tool(profiler_file, tool_info.get("port", 8504))
+                if success:
+                    st.success(f"✅ {message}")
+                else:
+                    st.error(f"❌ {message}")
+    else:
+        st.error("❌ No profiler tool found. Looking for: seamless_integrated_profiler.py")
+    
+    st.markdown("---")
+    
+    # Step 2: House Ranking Dashboard
+    st.subheader("2️⃣ House Ranking Dashboard")
+    st.markdown("*Score and rank houses based on your criteria*")
+    
+    ranking_file = "dynamic_dashboard.py"
+    if os.path.exists(ranking_file):
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <div class="tool-card status-good">
+                <h4>✅ House Ranking Dashboard</h4>
+                <p><strong>Purpose:</strong> Score, rank, and compare houses using your criteria</p>
+                <p><strong>When to use:</strong> After profiling, to see scored houses</p>
+                <p><em>AI-powered house scoring with real-time adjustments</em></p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("🚀 Launch Ranking", key="ranking_launch"):
+                success, message = hub.launch_tool(ranking_file, 8503)
+                if success:
+                    st.success(f"✅ {message}")
+                else:
+                    st.error(f"❌ {message}")
+    else:
+        st.error("❌ dynamic_dashboard.py not found")
+    
+    st.markdown("---")
+    
+    # Step 3: Data Collection & Analytics
+    st.subheader("3️⃣ Data Collection & Analytics")
+    st.markdown("*Gather house data and monitor your collection*")
+    
+    # Analytics Dashboard
+    analytics_file = "zillow_data_analytics_dashboard.py"
+    collector_file = "comprehensive_data_collector.py"
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("##### 📊 Analytics Dashboard")
+        if os.path.exists(analytics_file):
+            st.markdown(f"""
+            <div class="tool-card status-good">
+                <h4>✅ Data Analytics</h4>
+                <p>Monitor your data collection with maps and metrics</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("📊 View Analytics", key="analytics_launch"):
+                success, message = hub.launch_tool(analytics_file, 8502)
+                if success:
+                    st.success(f"✅ {message}")
+                else:
+                    st.error(f"❌ {message}")
+        else:
+            st.error("❌ zillow_data_analytics_dashboard.py not found")
+    
+    with col2:
+        st.markdown("##### 🔄 Data Collection")
+        if os.path.exists(collector_file):
+            st.markdown(f"""
+            <div class="tool-card status-good">
+                <h4>✅ Data Collector</h4>
+                <p>Bulk collection of house data from Zillow</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            api_key = os.getenv('RAPIDAPI_KEY')
+            if api_key:
+                if st.button("🚀 Run Collector", key="collector_launch"):
+                    success, message = hub.launch_tool(collector_file, None)
+                    if success:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.error(f"❌ {message}")
+                st.caption(f"API Key: {api_key[:8]}...")
+            else:
+                st.error("❌ No RAPIDAPI_KEY in .env file")
+        else:
+            st.error("❌ comprehensive_data_collector.py not found")
+
 def display_data_overview(hub):
     """Display data overview"""
     
@@ -492,414 +534,8 @@ def display_data_overview(hub):
             
             if days_since_update > 7:
                 st.warning("⚠️ Data is getting old")
-            elif days_since_update > 3:
-                st.info("💡 Consider updating soon")
             else:
                 st.success("✅ Data is fresh")
-
-def display_tools(hub):
-    """Display tools in logical workflow order"""
-    
-    st.header("🛠️ House Hunting Workflow")
-    st.markdown("*Follow this logical sequence for optimal house hunting*")
-    
-    # Step 1: Profile & Preferences
-    st.subheader("1️⃣ Define Your Ideal Home")
-    st.markdown("*Start here to clarify what you're looking for*")
-    
-    # Enhanced file detection for Seamless Integrated Profiler
-    profiler_files = [
-        "seamless_integrated_profiler.py",
-        "integrated_house_profiler.py",
-        "house_profiler.py",
-        "seamless_profiler.py"
-    ]
-    
-    profiler_file = None
-    profiler_exists = False
-    
-    # Try to find any profiler file
-    for filename in profiler_files:
-        if os.path.exists(filename):
-            profiler_file = filename
-            profiler_exists = True
-            break
-    
-    # If no profiler found, default to the expected name
-    if not profiler_file:
-        profiler_file = "seamless_integrated_profiler.py"
-    
-    # Define tool info
-    profiler_tool = {
-        "name": "Seamless Integrated Profiler",
-        "description": "Complete preference setup and ideal home profiling with AI",
-        "purpose": "Define your dream home criteria and preferences using AI assistance",
-        "when_to_use": "Start here - before any data collection or house hunting",
-        "available": profiler_exists,
-        "port": 8501,
-        "actual_file": profiler_file
-    }
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        status_class = "status-good" if profiler_exists else "status-error"
-        status_icon = "✅" if profiler_exists else "❌"
-        
-        st.markdown(f"""
-        <div class="tool-card {status_class}">
-            <h4>{status_icon} {profiler_tool['name']}</h4>
-            <p><strong>Purpose:</strong> {profiler_tool['purpose']}</p>
-            <p><strong>When to use:</strong> {profiler_tool['when_to_use']}</p>
-            <p><em>{profiler_tool['description']}</em></p>
-            {"<p><small>📁 Found: " + profiler_file + "</small></p>" if profiler_exists else ""}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Debug information
-        if not profiler_exists:
-            st.error("🔍 **Debugging Info:**")
-            current_dir_files = [f for f in os.listdir('.') if f.endswith('.py')]
-            
-            # Show all Python files
-            st.write("**Python files in current directory:**")
-            for f in sorted(current_dir_files):
-                st.write(f"  • {f}")
-            
-            # Check for similar files
-            similar_files = [f for f in current_dir_files if 'profiler' in f.lower() or 'integrated' in f.lower()]
-            if similar_files:
-                st.write("**Similar files found:**")
-                for f in similar_files:
-                    st.write(f"  🔍 {f}")
-            
-            st.write(f"**Current working directory:** `{os.getcwd()}`")
-    
-    with col2:
-        if profiler_exists:
-            if st.button(f"🚀 Launch Profiler", key="profiler_launch"):
-                success, message = hub.launch_tool(profiler_file, profiler_tool.get("port"))
-                if success:
-                    st.success(f"✅ {message}")
-                    st.info(f"🌐 Open: http://localhost:{profiler_tool['port']}")
-                else:
-                    st.error(f"❌ {message}")
-        else:
-            st.error(f"❌ File not found")
-            st.caption("Looking for:")
-            for filename in profiler_files:
-                st.caption(f"  • {filename}")
-            
-            # Quick create button
-            if st.button("📝 Create File", key="create_profiler"):
-                st.info(f"Would create {profiler_file}")
-                st.code(f"touch {profiler_file}", language="bash")
-    
-    st.markdown("---")
-    
-    # Step 2: House Ranking Dashboard
-    st.subheader("2️⃣ House Ranking Dashboard")
-    st.markdown("*Score and rank houses based on your criteria*")
-    
-    # Dynamic Dashboard - renamed to House Ranking Dashboard
-    ranking_file = "dynamic_dashboard.py"
-    ranking_exists = os.path.exists(ranking_file)
-    
-    ranking_tool = {
-        "name": "House Ranking Dashboard",
-        "description": "AI-powered house scoring and ranking with real-time adjustments",
-        "purpose": "Score, rank, and compare houses using your personalized criteria",
-        "when_to_use": "After profiling, to see scored houses and adjust ranking criteria",
-        "available": ranking_exists,
-        "port": 8502
-    }
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        status_class = "status-good" if ranking_exists else "status-error"
-        status_icon = "✅" if ranking_exists else "❌"
-        
-        st.markdown(f"""
-        <div class="tool-card {status_class}">
-            <h4>{status_icon} {ranking_tool['name']}</h4>
-            <p><strong>Purpose:</strong> {ranking_tool['purpose']}</p>
-            <p><strong>When to use:</strong> {ranking_tool['when_to_use']}</p>
-            <p><em>{ranking_tool['description']}</em></p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        if ranking_exists:
-            if st.button(f"🚀 Launch Ranking Dashboard", key="ranking_launch"):
-                success, message = hub.launch_tool(ranking_file, ranking_tool.get("port"))
-                if success:
-                    st.success(f"✅ {message}")
-                    st.info(f"🌐 Open: http://localhost:{ranking_tool['port']}")
-                else:
-                    st.error(f"❌ {message}")
-        else:
-            st.error(f"❌ {ranking_file} not found")
-            st.caption("House scoring and ranking interface")
-    
-    st.markdown("---")
-    
-    # Step 3: Data Collection Section
-    st.subheader("3️⃣ Zillow Data Collection")
-    st.markdown("*Gather house data and monitor your collection*")
-    
-    # Analytics Dashboard First
-    analytics_file = "zillow_data_analytics_dashboard.py"
-    analytics_tool = None
-    
-    for category_tools in hub.tools.values():
-        if analytics_file in category_tools:
-            analytics_tool = category_tools[analytics_file]
-            break
-    
-    if not analytics_tool:
-        analytics_tool = {
-            "name": "Zillow Data Analytics Dashboard",
-            "description": "Monitor your data collection with maps, metrics, and insights",
-            "purpose": "See what data you've collected and analyze market trends",
-            "when_to_use": "Check this regularly to monitor your data collection progress",
-            "available": os.path.exists(analytics_file),
-            "port": 8503
-        }
-    
-    # Comprehensive Collector
-    collector_file = "comprehensive_data_collector.py"
-    collector_tool = None
-    
-    for category_tools in hub.tools.values():
-        if collector_file in category_tools:
-            collector_tool = category_tools[collector_file]
-            break
-    
-    if not collector_tool:
-        collector_tool = {
-            "name": "Comprehensive Data Collector",
-            "description": "Bulk collection of house data from multiple searches",
-            "purpose": "Gather large amounts of house data efficiently",
-            "when_to_use": "When you need fresh data or want to expand your database",
-            "available": os.path.exists(collector_file),
-            "port": None
-        }
-    
-    # Analytics Dashboard
-    st.markdown("##### 📊 Data Monitoring")
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        status_class = "status-good" if analytics_tool["available"] else "status-error"
-        status_icon = "✅" if analytics_tool["available"] else "❌"
-        
-        st.markdown(f"""
-        <div class="tool-card {status_class}">
-            <h4>{status_icon} {analytics_tool['name']}</h4>
-            <p><strong>Purpose:</strong> {analytics_tool['purpose']}</p>
-            <p><strong>When to use:</strong> {analytics_tool['when_to_use']}</p>
-            <p><em>{analytics_tool['description']}</em></p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        if analytics_tool["available"]:
-            if st.button(f"📊 View Analytics", key="analytics_launch"):
-                success, message = hub.launch_tool(analytics_file, analytics_tool.get("port"))
-                if success:
-                    st.success(f"✅ {message}")
-                    st.info(f"🌐 Open: http://localhost:{analytics_tool['port']}")
-                else:
-                    st.error(f"❌ {message}")
-        else:
-            st.error(f"❌ {analytics_file} not found")
-    
-    # Data Collection Actions
-    st.markdown("##### 🔄 Data Collection Actions")
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        status_class = "status-good" if collector_tool["available"] else "status-error"
-        status_icon = "✅" if collector_tool["available"] else "❌"
-        
-        st.markdown(f"""
-        <div class="tool-card {status_class}">
-            <h4>{status_icon} {collector_tool['name']}</h4>
-            <p><strong>Purpose:</strong> {collector_tool['purpose']}</p>
-            <p><strong>When to use:</strong> {collector_tool['when_to_use']}</p>
-            <p><em>{collector_tool['description']}</em></p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Show current data status
-        if hub.data_status["total_houses"] > 0:
-            days_since_update = 0
-            if hub.data_status["last_updated"]:
-                days_since_update = (datetime.now() - hub.data_status["last_updated"]).days
-            
-            if days_since_update > 7:
-                st.warning(f"⚠️ Data is {days_since_update} days old - consider updating")
-            elif days_since_update > 3:
-                st.info(f"💡 Data is {days_since_update} days old - may want to refresh soon")
-            else:
-                st.success(f"✅ Data is fresh ({days_since_update} days old)")
-        else:
-            st.info("📭 No data collected yet - start with comprehensive collection")
-    
-    with col2:
-        if collector_tool["available"]:
-            # Check API key status
-            api_key = os.getenv('RAPIDAPI_KEY')
-            
-            if api_key:
-                if st.button(f"🚀 Run Collector", key="collector_launch", type="primary"):
-                    success, message = hub.launch_tool(collector_file, None)
-                    if success:
-                        st.success(f"✅ {message}")
-                        st.info("⏳ Collection running in background...")
-                    else:
-                        st.error(f"❌ {message}")
-                
-                st.caption(f"API Key: {api_key[:8]}...")
-            else:
-                st.error("❌ No RAPIDAPI_KEY")
-                st.caption("Add to .env file first")
-        else:
-            st.error(f"❌ {collector_file} not found")
-    
-    # Workflow guidance
-    st.markdown("---")
-    st.markdown("### 🎯 Recommended Workflow")
-    
-    workflow_col1, workflow_col2 = st.columns(2)
-    
-    with workflow_col1:
-        st.markdown("""
-        **🆕 First Time Setup:**
-        1. Start with **Seamless Integrated Profiler**
-        2. Use **House Ranking Dashboard** to score houses
-        3. Run **Comprehensive Collector** to get initial data
-        4. Monitor progress with **Analytics Dashboard**
-        """)
-    
-    with workflow_col2:
-        st.markdown("""
-        **🔄 Regular Usage:**
-        1. Check **Analytics Dashboard** for insights
-        2. Adjust scoring in **House Ranking Dashboard**
-        3. Run **Collector** weekly for fresh data
-        4. Review newly ranked opportunities
-        """)
-    
-    # Quick status overview
-    st.markdown("### 📊 Quick Status")
-    
-    status_col1, status_col2, status_col3, status_col4 = st.columns(4)
-    
-    with status_col1:
-        profiler_status = "🟢" if profiler_exists else "🔴"
-        st.markdown(f"{profiler_status} **Profiler** {'Ready' if profiler_exists else 'Missing'}")
-    
-    with status_col2:
-        ranking_status = "🟢" if ranking_exists else "🔴"
-        st.markdown(f"{ranking_status} **Ranking** {'Ready' if ranking_exists else 'Missing'}")
-    
-    with status_col3:
-        analytics_status = "🟢" if analytics_tool["available"] else "🔴"
-        st.markdown(f"{analytics_status} **Analytics** {'Ready' if analytics_tool['available'] else 'Missing'}")
-    
-    with status_col4:
-        collector_status = "🟢" if collector_tool["available"] else "🔴"
-        st.markdown(f"{collector_status} **Collector** {'Ready' if collector_tool['available'] else 'Missing'}")
-
-def display_quick_actions():
-    """Display quick actions and workflows"""
-    
-    st.header("⚡ Quick Actions")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("🎯 Recommended Workflows")
-        
-        workflows = [
-            {
-                "name": "🚀 First Time Setup",
-                "steps": [
-                    "1. Check system status above",
-                    "2. Set up API keys in .env file", 
-                    "3. Run Parameter Workshop to set preferences",
-                    "4. Use Zillow Collector to get initial data",
-                    "5. View results in Analytics Dashboard"
-                ]
-            },
-            {
-                "name": "📊 Daily House Hunting",
-                "steps": [
-                    "1. Check Analytics Dashboard for new insights",
-                    "2. Use Live Dashboard to see top recommendations",
-                    "3. Adjust preferences in Dynamic Dashboard",
-                    "4. Collect fresh data if needed"
-                ]
-            },
-            {
-                "name": "🔄 Weekly Data Refresh", 
-                "steps": [
-                    "1. Run Comprehensive Collector for bulk update",
-                    "2. Check Analytics Dashboard for trends",
-                    "3. Update preferences based on new insights",
-                    "4. Export top recommendations"
-                ]
-            }
-        ]
-        
-        for workflow in workflows:
-            with st.expander(workflow["name"]):
-                for step in workflow["steps"]:
-                    st.write(step)
-    
-    with col2:
-        st.subheader("🛠️ Utilities")
-        
-        if st.button("📁 Open Project Directory"):
-            if sys.platform == "win32":
-                os.startfile(".")
-            elif sys.platform == "darwin":
-                subprocess.run(["open", "."])
-            else:
-                subprocess.run(["xdg-open", "."])
-        
-        if st.button("🔄 Refresh All Status"):
-            st.cache_data.clear()
-            st.rerun()
-        
-        if st.button("📝 View .env File"):
-            if os.path.exists(".env"):
-                with open(".env", "r") as f:
-                    env_content = f.read()
-                st.code(env_content, language="bash")
-            else:
-                st.warning(".env file not found")
-        
-        if st.button("📋 Generate Setup Report"):
-            # Create a setup report
-            report = {
-                "timestamp": datetime.now().isoformat(),
-                "system_status": hub.system_status,
-                "data_status": hub.data_status,
-                "available_tools": {k: {fname: finfo["available"] for fname, finfo in tools.items()} 
-                                 for k, tools in hub.tools.items()}
-            }
-            
-            st.download_button(
-                "💾 Download Setup Report",
-                json.dumps(report, indent=2, default=str),
-                file_name=f"house_hunting_setup_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
 
 def main():
     """Main command center application"""
@@ -911,7 +547,7 @@ def main():
     display_header()
     
     # Main content in tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["🔧 Status", "📊 Data", "🛠️ Tools", "⚡ Quick Actions"])
+    tab1, tab2, tab3 = st.tabs(["🔧 Status", "📊 Data", "🛠️ Workflow"])
     
     with tab1:
         display_system_status(hub)
@@ -920,77 +556,47 @@ def main():
         display_data_overview(hub)
     
     with tab3:
-        display_tools(hub)
+        display_workflow_tools(hub)
     
-    with tab4:
-        display_quick_actions()
-    
-    # Sidebar with overview
+    # Sidebar with quick launch
     with st.sidebar:
-        st.header("📋 Overview")
+        st.header("📋 Quick Launch")
         
-        # Quick metrics
-        available_tools = sum(1 for category in hub.tools.values() 
-                            for tool in category.values() if tool["available"])
-        total_tools = sum(len(category) for category in hub.tools.values())
-        
-        st.metric("Available Tools", f"{available_tools}/{total_tools}")
-        st.metric("Total Houses", hub.data_status["total_houses"])
-        
-        # Quick launch buttons for most common tools in workflow order
-        st.markdown("### 🚀 Quick Launch")
-        
-        # Updated priority tools following the logical workflow
+        # Priority tools in workflow order
         priority_tools = [
-            ("seamless_integrated_profiler.py", "1️⃣ Start Profiler"),
-            ("dynamic_dashboard.py", "2️⃣ House Ranking"),
-            ("zillow_data_analytics_dashboard.py", "3️⃣ Analytics"),
-            ("comprehensive_data_collector.py", "🔄 Collect Data")
+            ("seamless_integrated_profiler.py", "1️⃣ Profiler", 8504),
+            ("dynamic_dashboard.py", "2️⃣ Ranking", 8503),
+            ("zillow_data_analytics_dashboard.py", "📊 Analytics", 8502),
+            ("comprehensive_data_collector.py", "🔄 Collector", None)
         ]
         
-        for filename, label in priority_tools:
-            # Check if file exists directly
-            file_exists = os.path.exists(filename)
-            
-            # Try to find in discovered tools first, then fallback to file check
-            tool_info = None
-            for category_tools in hub.tools.values():
-                if filename in category_tools:
-                    tool_info = category_tools[filename]
-                    break
-            
-            # If not in discovered tools but file exists, create basic tool info
-            if not tool_info and file_exists:
-                port_map = {
-                    "seamless_integrated_profiler.py": 8501,
-                    "dynamic_dashboard.py": 8502,
-                    "zillow_data_analytics_dashboard.py": 8503,
-                    "comprehensive_data_collector.py": None
-                }
-                tool_info = {"available": True, "port": port_map.get(filename)}
-            
-            if tool_info and tool_info["available"]:
+        for filename, label, port in priority_tools:
+            if os.path.exists(filename):
                 if st.button(label, key=f"sidebar_{filename}"):
-                    success, message = hub.launch_tool(filename, tool_info.get("port"))
+                    success, message = hub.launch_tool(filename, port)
                     if success:
                         st.success("✅ Launched!")
-                        if tool_info.get("port"):
-                            st.caption(f"Port: {tool_info['port']}")
+                        if port:
+                            st.caption(f"Port: {port}")
+                    else:
+                        st.error(f"❌ {message}")
             else:
                 st.caption(f"❌ {filename} missing")
         
-        # Show workflow status
-        st.markdown("### 📊 Workflow Status")
+        st.markdown("---")
+        
+        # Workflow status
+        st.subheader("📊 Workflow Status")
         
         workflow_files = [
             "seamless_integrated_profiler.py",
-            "dynamic_dashboard.py", 
-            "zillow_data_analytics_dashboard.py",
+            "dynamic_dashboard.py",
+            "zillow_data_analytics_dashboard.py", 
             "comprehensive_data_collector.py"
         ]
         
         ready_count = sum(1 for f in workflow_files if os.path.exists(f))
-        st.metric("Workflow Ready", f"{ready_count}/4")
+        st.metric("Tools Ready", f"{ready_count}/4")
         
         if ready_count == 4:
             st.success("🎉 Complete setup!")
@@ -999,59 +605,12 @@ def main():
         else:
             st.warning("⚠️ Setup needed")
         
-        # Debug info to help troubleshoot
-        st.markdown("### 🔍 Detailed File Detection")
-        
-        # Show current directory
-        current_dir = os.getcwd()
-        st.caption(f"📁 **Current directory:** {current_dir}")
-        
-        # List all Python files
-        py_files = [f for f in os.listdir('.') if f.endswith('.py')]
-        st.caption(f"📄 **Python files found:** {len(py_files)}")
-        
-        # Check each workflow file specifically
-        workflow_files = [
-            "seamless_integrated_profiler.py",
-            "dynamic_dashboard.py", 
-            "zillow_data_analytics_dashboard.py",
-            "comprehensive_data_collector.py"
-        ]
-        
+        # Quick status indicators
         for f in workflow_files:
             exists = os.path.exists(f)
             status = "✅" if exists else "❌"
-            st.caption(f"{status} {f}")
-        
-        # Look for similar files
-        st.caption("**Files containing 'profiler':**")
-        profiler_files = [f for f in py_files if 'profiler' in f.lower()]
-        if profiler_files:
-            for f in profiler_files:
-                st.caption(f"  🔍 {f}")
-        else:
-            st.caption("  None found")
-        
-        st.caption("**Files containing 'integrated':**")
-        integrated_files = [f for f in py_files if 'integrated' in f.lower()]
-        if integrated_files:
-            for f in integrated_files:
-                st.caption(f"  🔍 {f}")
-        else:
-            st.caption("  None found")
-        
-        # Manual file check
-        st.markdown("### 🔧 Manual Check")
-        manual_file = st.text_input("Enter exact filename:", key="manual_file_check")
-        if manual_file:
-            file_exists = os.path.exists(manual_file)
-            if file_exists:
-                st.success(f"✅ {manual_file} exists!")
-            else:
-                st.error(f"❌ {manual_file} not found")
-        
-        st.markdown("---")
-        st.caption(f"Last refreshed: {datetime.now().strftime('%H:%M:%S')}")
+            short_name = f.replace("_", " ").replace(".py", "").title()
+            st.caption(f"{status} {short_name}")
 
 if __name__ == "__main__":
     main()
